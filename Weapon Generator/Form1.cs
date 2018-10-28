@@ -8,13 +8,15 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
+using System.Drawing.Imaging;
+using System.Drawing.Drawing2D;
 
 namespace Weapon_Generator
 {
     public partial class Form1 : Form
     {
-        int rotateTimes = 1;
-
+        bool open = false;
+        Form2 pic = new Form2();
         public Form1()
         {
             InitializeComponent();
@@ -48,45 +50,57 @@ namespace Weapon_Generator
             }
             pictureBox1.Image = Image.FromFile(filePath);
             pictureBox1.Visible = true;
-            pictureBox2.Visible = true;
-            button1.Visible = false;
             button2.Enabled = true;
+            button3.Enabled = true;
+            pic.pictureBox2.Image = RotateImage(new Bitmap(pictureBox1.Image), (float)22.5);
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-                pictureBox2.Image = RotateImage(new Bitmap(pictureBox1.Image), 18 * rotateTimes);
-                rotateTimes++;
+            var fileContent = string.Empty;
+            var filePath = string.Empty;
+
+            using (SaveFileDialog saveFileDialog = new SaveFileDialog())
+            {
+                saveFileDialog.InitialDirectory = "c:\\";
+                saveFileDialog.Filter = "Image Files(*.jpeg;*.bmp;*.png;*.jpg)|*.jpeg;*.bmp;*.png;*.jpg";
+                saveFileDialog.FilterIndex = 2;
+                saveFileDialog.RestoreDirectory = true;
+
+                if (saveFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    //Get the path of specified file
+                    filePath = saveFileDialog.FileName;
+                    pic.pictureBox2.Image.Save(filePath, System.Drawing.Imaging.ImageFormat.Png);
+                }
+            }
         }
 
         private Bitmap RotateImage(Bitmap rotateMe, float angle)
         {
-            //First, re-center the image in a larger image that has a margin/frame
-            //to compensate for the rotated image's increased size
-
-            //var bmp = new Bitmap(rotateMe.Width + (rotateMe.Width / 2), rotateMe.Height + (rotateMe.Height / 2));
-
-            //using (Graphics g = Graphics.FromImage(bmp))
-            //    g.DrawImageUnscaled(rotateMe, (rotateMe.Width / 4), (rotateMe.Height / 4), bmp.Width, bmp.Height);
-
-            //bmp.Save("moved.png");
-            //rotateMe = bmp;
-
+            int x, y;
+            int size = rotateMe.Width;
+            if (rotateMe.Height > size)
+              size = rotateMe.Height + 1;
             //Now, actually rotate the image
-            Bitmap rotatedImage = new Bitmap(rotateMe.Width, rotateMe.Height);
-            Bitmap ss = new Bitmap(rotateMe.Width * 40, rotateMe.Height * 40);
-            //Bitmap backup = rotatedImage;
+            Bitmap ss = new Bitmap(size * 24, size * 8);
+            Pen p = new Pen(Color.Green);
 
             using (Graphics t = Graphics.FromImage(ss))
             {
-                for (int i = 1; i < 5; i++)
+                for (int i = 1; i < 3; i++)
                 {
                     for (int j = 1; j < 11; j++)
                     {
-                        using (Graphics g = Graphics.FromImage(rotatedImage))
+                        using (Graphics g = Graphics.FromImage(rotateMe))
                         {
-                            t.DrawImage(Rotate(rotateMe, 18 * (i * j)), new Point(rotateMe.Height * j, rotateMe.Width * i)); //draw the image on the new bitmap
-                            //rotatedImage = backup;
+                            x = (size) * j;
+                            y = (size) * i;
+                            t.DrawImage(RotateImg(rotateMe, (float)(22.5 * ((i - 1) * 10 + j - 1))), new Point(x, y)); //draw the image on the new bitmap
+                            t.DrawLine(p, new Point(x, y), new Point(x, y + size));
+                            t.DrawLine(p, new Point(x, y), new Point(x + size, y));
+                            t.DrawLine(p, new Point(x, y + size), new Point(x + size, y + size));
+                            t.DrawLine(p, new Point(x + size, y), new Point(x + size, y + size));
                         }
                     }
                 }
@@ -95,32 +109,36 @@ namespace Weapon_Generator
             return ss;
         }
 
-        private Bitmap Rotate(Bitmap rotateMe, float angle)
+        public static Bitmap RotateImg(Bitmap bmp, float angle)
         {
-            //First, re-center the image in a larger image that has a margin/frame
-            //to compensate for the rotated image's increased size
+            int w = bmp.Width;
+            int h = bmp.Height;
+            Bitmap tempImg = new Bitmap(w, h);
+            Graphics g = Graphics.FromImage(tempImg);
+            g.DrawImage(bmp, new Point(0, 0));
+            g.Dispose();
+            GraphicsPath path = new GraphicsPath();
+            path.AddRectangle(new RectangleF(0f, 0f, w, h));
+            Matrix mtrx = new Matrix();
+            mtrx.RotateAt(angle, new PointF(0, 0));
+            RectangleF rct = path.GetBounds(mtrx);
+            Bitmap newImg = new Bitmap(Convert.ToInt32(rct.Width), Convert.ToInt32(rct.Height));
+            g = Graphics.FromImage(newImg);
+            g.TranslateTransform(-rct.X, -rct.Y);
+            g.RotateTransform(angle);
+            g.InterpolationMode = InterpolationMode.HighQualityBilinear;
+            g.DrawImageUnscaled(tempImg, 0, 0);
+            g.Dispose();
+            tempImg.Dispose();
+            return newImg;
+        }
 
-            //var bmp = new Bitmap(rotateMe.Width + (rotateMe.Width / 2), rotateMe.Height + (rotateMe.Height / 2));
-
-            //using (Graphics g = Graphics.FromImage(bmp))
-            //    g.DrawImageUnscaled(rotateMe, (rotateMe.Width / 4), (rotateMe.Height / 4), bmp.Width, bmp.Height);
-
-            //bmp.Save("moved.png");
-            //rotateMe = bmp;
-
-            //Now, actually rotate the image
-            Bitmap rotatedImage = new Bitmap(rotateMe.Width, rotateMe.Height);
-
-            using (Graphics g = Graphics.FromImage(rotatedImage))
-            {
-                g.TranslateTransform(rotateMe.Width / 2, rotateMe.Height / 2);   //set the rotation point as the center into the matrix
-                g.RotateTransform(angle);                                        //rotate
-                g.TranslateTransform(-rotateMe.Width / 2, -rotateMe.Height / 2); //restore rotation point into the matrix
-                g.DrawImage(rotateMe, new Point(0, 0));                          //draw the image on the new bitmap
-            }
-
-            rotatedImage.Save("rotated.png");
-            return rotatedImage;
+        private void button3_Click(object sender, EventArgs e)
+        {
+            Image a = pic.pictureBox2.Image;
+            pic = new Form2();
+            pic.pictureBox2.Image = a;
+            pic.Show();
         }
     }
 }
