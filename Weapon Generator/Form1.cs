@@ -37,11 +37,12 @@ namespace Weapon_Generator
 
         private Bitmap RotateImage(Bitmap rotateMe, Bitmap rotateMe2, float angle)
         {
-            int x, y;
+            int x, y, dx, dy;
             int decr = 1;
             int size = rotateMe.Width;
             if (rotateMe.Height > size)
-              size = rotateMe.Height + 1;
+                size = rotateMe.Height;
+            size++;
             //Now, actually rotate the image
             Bitmap ss = new Bitmap(size * 24, size * 8);
             Pen p = new Pen(Color.Green);
@@ -66,6 +67,8 @@ namespace Weapon_Generator
                             }
                             x = (size) * j;
                             y = (size) * i;
+                            dx = x + (size / 2);
+                            dy = y + (size / 2);
                             t.DrawImage(RotateImg(rotateMe, (float)(22.5 * ((i - decr) * 10 + j - 1))), new Point(x, y)); //draw the image on the new bitmap
                             if (checkBox1.Checked)
                             {
@@ -78,12 +81,33 @@ namespace Weapon_Generator
                     }
                 }
             }
-            ss.Save("rotated.png");
             return ss;
         }
 
+        //private Bitmap RotateImg(Bitmap bmp, float angle)
+        //{
+        //    Bitmap rotatedImage = new Bitmap(bmp.Width, bmp.Height);
+        //    using (Graphics g = Graphics.FromImage(rotatedImage))
+        //    {
+        //        // Set the rotation point to the center in the matrix
+        //        g.TranslateTransform(bmp.Width / 2, bmp.Height / 2);
+        //        // Rotate
+        //        g.RotateTransform(angle);
+        //        // Restore rotation point in the matrix
+        //        g.TranslateTransform(-bmp.Width / 2, -bmp.Height / 2);
+        //        // Draw the image on the bitmap
+        //        g.DrawImage(bmp, new Point(0, 0));
+        //    }
+
+        //    return rotatedImage;
+        //}
+
         public static Bitmap RotateImg(Bitmap bmp, float angle)
         {
+            int size = bmp.Width;
+            if (bmp.Height > size)
+                size = bmp.Height;
+            size++;
             int w = bmp.Width;
             int h = bmp.Height;
             Bitmap tempImg = new Bitmap(w, h);
@@ -103,6 +127,7 @@ namespace Weapon_Generator
             g.DrawImageUnscaled(tempImg, 0, 0);
             g.Dispose();
             tempImg.Dispose();
+            newImg = ScaleImage(newImg, size, size);
             return newImg;
         }
 
@@ -189,6 +214,29 @@ namespace Weapon_Generator
                 button2.Enabled = true;
                 button3.Enabled = true;
             }
+        }
+
+        private static Bitmap ScaleImage(Bitmap image, int maxWidth, int maxHeight)
+        {
+            var ratioX = (double)maxWidth / image.Width;
+            var ratioY = (double)maxHeight / image.Height;
+            var ratio = Math.Min(ratioX, ratioY);
+
+            var newWidth = (int)(image.Width * ratio);
+            var newHeight = (int)(image.Height * ratio);
+
+            var newImage = new Bitmap(maxWidth, maxHeight);
+            using (var graphics = Graphics.FromImage(newImage))
+            {
+                // Calculate x and y which center the image
+                int y = (maxHeight / 2) - newHeight / 2;
+                int x = (maxWidth / 2) - newWidth / 2;
+
+                // Draw image on x and y with newWidth and newHeight
+                graphics.DrawImage(image, x, y, newWidth, newHeight);
+            }
+
+            return newImage;
         }
     }
 }
